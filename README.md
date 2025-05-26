@@ -6,6 +6,12 @@ Environment setup:
 conda env create -f env.yml
 conda activate python-final
 ```
+
+### Run the game
+```
+python main.py
+```
+
 ### Pacman movement
 Remember to switch the keyboard to English
 - A: w, s, a, d
