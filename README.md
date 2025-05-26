@@ -4,6 +4,7 @@
 Environment setup:
 ```
 conda env create -f env.yml
+conda activate python-final
 ```
 ### Pacman movement
 Remember to switch the keyboard to English
