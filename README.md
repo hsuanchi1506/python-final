@@ -1,5 +1,7 @@
 # Python Final Project
 
+![Game Screenshot](images/teaser.png)
+
 ## Environment setup
 Environment setup:
 ```

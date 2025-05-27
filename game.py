@@ -2,10 +2,11 @@ import pygame, random
 from player import Player
 from maze   import Maze
 from dot    import Dot
-from bigfruit import BigFruit
+
 
 class Game:
-    TOP_MARGIN = 60  # Scoreboard height
+    # TOP_MARGIN = 60  # Scoreboard height
+    TOP_MARGIN = 80
 
     def __init__(self, screen):
         self.screen = screen
@@ -132,110 +133,142 @@ class Game:
     # Scoreboard
     # --------------------------------------------------
     def draw_scores(self):
-        h  = self.TOP_MARGIN            # 60 px
-        pad = 6                         # inner padding
+        pad = 6
         col_w = self.sw // len(self.players)
 
-        # ---------- background gradient & border ----------
-        grad = pygame.Surface((self.sw, h), pygame.SRCALPHA)
-        base_color = (22, 160, 133)  # Your desired main background color
-        for y in range(h):
-            # Create a subtle gradient by varying the color slightly around the base
-            factor = y / h  # 0 at top, 1 at bottom
-            # Adjust brightness: slightly lighter at top, slightly darker at bottom
-            r = int(base_color[0])  # Vary red by ±20
-            g = int(base_color[1])  # Vary green by ±20
-            b = int(base_color[2])  # Vary blue by ±20
-            # Clamp values to ensure they stay in valid range (0-255)
-            r = max(0, min(255, r))
-            g = max(0, min(255, g))
-            b = max(0, min(255, b))
-            grad.fill((r, g, b, 230), pygame.Rect(0, y, self.sw, 1))
+        # --------------------
+        # Background gradient & border
+        # --------------------
+        grad = pygame.Surface((self.sw, self.TOP_MARGIN), pygame.SRCALPHA)
+        base_color = (22, 160, 133)
+        for y in range(self.TOP_MARGIN):
+            grad.fill((*base_color, 230), pygame.Rect(0, y, self.sw, 1))
         self.screen.blit(grad, (0, 0))
-        pygame.draw.rect(self.screen, (247, 220, 111),
-                        pygame.Rect(0, 0, self.sw, h), width=2, border_radius=8)
+        pygame.draw.rect(
+            self.screen,
+            (247, 220, 111),
+            pygame.Rect(0, 0, self.sw, self.TOP_MARGIN),
+            width=2,
+            border_radius=8
+        )
 
-        # ---------- line 1: predator → prey ----------
-        def make_circle_surf(col, r=8):
-            """Return a surface containing a filled circle of given color/radius."""
-            s = pygame.Surface((r*2, r*2), pygame.SRCALPHA)
-            pygame.draw.circle(s, col, (r, r), r)
-            return s
+        # --------------------
+        # Row 1: predator -> prey and controls
+        # --------------------
+        y_baseline = 8  # vertical start for icons & keys
 
-        def make_arrow_surf(w=20, h=16, col=(255,255,255), bar_thick=6):
-            """
-            Draw a short, thick horizontal arrow.
-            """
-            surf = pygame.Surface((w, h), pygame.SRCALPHA)
+        def make_circle_surf(color, radius=8):
+            surf = pygame.Surface((radius*2, radius*2), pygame.SRCALPHA)
+            pygame.draw.circle(surf, color, (radius, radius), radius)
+            return surf
+
+        def make_arrow_surf(width=20, height=16, color=(255,255,255), thickness=6):
+            surf = pygame.Surface((width, height), pygame.SRCALPHA)
             pygame.draw.rect(
-                surf, col,
-                (0, (h - bar_thick)//2, w - h//2, bar_thick)  # shorten main bar
+                surf,
+                color,
+                (0, (height-thickness)//2, width-height//2, thickness)
             )
             pygame.draw.polygon(
-                surf, col,
-                [(w - h//2, 0), (w, h//2), (w - h//2, h)]     # triangle head
+                surf,
+                color,
+                [(width-height//2, 0), (width, height//2), (width-height//2, height)]
             )
             return surf
 
-        arrow_srf = make_arrow_surf()              # shorter arrow
-        gap_srf = pygame.Surface((6, 1), pygame.SRCALPHA)  # 6-px transparent gap
+        arrow_surf = make_arrow_surf()
+        icon_height = arrow_surf.get_height()  # 16px
 
-        # Draw each player's predator → prey group aligned with Line 2's x0
-        y_pos = 4  # y position for Line 1
+        key_layouts = [
+            ["W", "A", "S", "D"],
+            ["↑", "←", "↓", "→"],
+            ["I", "J", "K", "L"],
+        ]
+        box_w, box_h = 28, 28
+        box_gap    = 6
+        font_small = pygame.font.SysFont("Arial", 14)
+
+        # center-line for icons and boxes
+        icon_center_y = y_baseline + icon_height / 2
+        box_y = int(icon_center_y - box_h / 2)
+
         for i, p in enumerate(self.players):
-            # Compute x0 to match Line 2's positioning
             x0 = i * col_w + pad
-            
-            # Create the pieces for this player (predator → prey)
+
+            # draw predator -> prey
             pieces = [
-                make_circle_surf(p.color),  # Predator circle
-                gap_srf,                    # Gap before arrow
-                arrow_srf,                  # Arrow
-                gap_srf,                    # Gap after arrow
-                make_circle_surf(p.prey.color if p.prey else (90, 90, 90)),  # Prey circle (gray if None)
-                gap_srf                     # Extra gap between pairs
+                make_circle_surf(p.color),
+                pygame.Surface((6,1), pygame.SRCALPHA),
+                arrow_surf,
+                pygame.Surface((6,1), pygame.SRCALPHA),
+                make_circle_surf(p.prey.color if p.prey else (90,90,90))
             ]
-            
-            # Draw each piece starting at x0
             cur_x = x0
-            for srf in pieces:
-                self.screen.blit(srf, (cur_x, y_pos))
-                cur_x += srf.get_width()
+            for piece in pieces:
+                self.screen.blit(piece, (cur_x, y_baseline))
+                cur_x += piece.get_width()
 
-        # ---------- line 2: player cards (unchanged) ----------
+            cur_x += 6  # small gap before controls
+
+            # draw control keys, horizontally aligned with icons
+            for j, key in enumerate(key_layouts[i]):
+                bx = cur_x + j * (box_w + box_gap)
+                by = box_y
+                box_rect = pygame.Rect(bx, by, box_w, box_h)
+
+                pygame.draw.rect(self.screen, (50,50,50), box_rect, border_radius=6)
+                pygame.draw.rect(self.screen, p.color, box_rect, width=2, border_radius=6)
+
+                key_surf = font_small.render(key, True, (255,255,255))
+                kx = bx + (box_w - key_surf.get_width()) // 2
+                ky = by + (box_h - key_surf.get_height()) // 2
+                self.screen.blit(key_surf, (kx, ky))
+
+        # --------------------
+        # Row 2: player cards (closer margin = 4px)
+        # --------------------
         card_h = 26
-        base_y = 30
-        score_f = pygame.font.SysFont("Arial", 18, bold=True)
-        small_f = pygame.font.SysFont("Arial", 14)
+        content_height = max(icon_height, box_h)
+        vertical_margin = 4  # <-- was 8, now 4 for tighter spacing
+        base_y = y_baseline + content_height + vertical_margin
+        font_score = pygame.font.SysFont("Arial", 18, bold=True)
 
         for i, p in enumerate(self.players):
             x0 = i * col_w + pad
-            card_rect = pygame.Rect(x0, base_y, col_w - 2 * pad, card_h)
-            pygame.draw.rect(self.screen, (30, 30, 30, 220), card_rect, border_radius=10)
+            card_rect = pygame.Rect(x0, base_y, col_w - 2*pad, card_h)
+
+            pygame.draw.rect(self.screen, (30,30,30,220), card_rect, border_radius=10)
             pygame.draw.rect(self.screen, p.color, card_rect, width=2, border_radius=10)
 
             # avatar
             pygame.draw.circle(
                 self.screen,
-                p.color if p.alive else (90, 90, 90),
-                (x0 + 15, base_y + card_h // 2), 10,
+                p.color if p.alive else (90,90,90),
+                (x0 + 15, base_y + card_h//2),
+                10,
                 0 if p.alive else 2
             )
 
             # score
-            sc_txt = score_f.render(str(p.score), True, (255, 255, 255))
-            self.screen.blit(sc_txt,
-                            (x0 + 35, base_y + card_h // 2 - sc_txt.get_height() // 2))
+            score_surf = font_score.render(str(p.score), True, (255,255,255))
+            self.screen.blit(
+                score_surf,
+                (x0 + 35, base_y + card_h//2 - score_surf.get_height()//2)
+            )
 
-            # extra seconds (power / respawn)
+            # extra timer
             extra = ""
             if p.power_mode:
-                extra = f"{p.power_timer // 60 + 1}s"
+                extra = f"{p.power_timer//60 + 1}s"
             elif not p.alive:
-                extra = f"{p.respawn_timer // 60 + 1}s"
+                extra = f"{p.respawn_timer//60 + 1}s"
             if extra:
-                ext_col = (255, 215, 0) if p.power_mode else (200, 200, 200)
-                ex_srf = small_f.render(extra, True, ext_col)
-                self.screen.blit(ex_srf,
-                                (card_rect.right - ex_srf.get_width() - 6,
-                                base_y + card_h // 2 - ex_srf.get_height() // 2))
+                color_extra = (255,215,0) if p.power_mode else (200,200,200)
+                extra_surf = font_small.render(extra, True, color_extra)
+                self.screen.blit(
+                    extra_surf,
+                    (card_rect.right - extra_surf.get_width() - 6,
+                    base_y + card_h//2 - extra_surf.get_height()//2)
+                )
+
+

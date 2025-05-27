@@ -78,13 +78,3 @@ class Maze:
                     # Inner highlight
                     pygame.draw.rect(screen, inner_color,
                                      rect.inflate(-2, -2), width=1, border_radius=self.cell_size // 6)
-
-    # --------------------------------------------------
-    # Break walls in a square region centered at (cx, cy) with radius r
-    # --------------------------------------------------
-    def blast_walls(self, cx, cy, r):
-        for dy in range(-r, r + 1):
-            for dx in range(-r, r + 1):
-                gx, gy = cx + dx, cy + dy
-                if 0 <= gx < self.width and 0 <= gy < self.height:
-                    self.grid[gy][gx] = 0  # Remove wall
