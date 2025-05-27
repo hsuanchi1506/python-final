@@ -10,7 +10,7 @@ class Game:
     def __init__(self, screen):
         self.screen = screen
         self.sw, self.sh = screen.get_width(), screen.get_height()
-        self.bg_color = (0, 0, 0)
+        self.bg_color = (33, 47, 60)
 
         # ---------- Maze (excluding top 60px) ----------
         self.cell = 20
@@ -138,12 +138,22 @@ class Game:
 
         # ---------- background gradient & border ----------
         grad = pygame.Surface((self.sw, h), pygame.SRCALPHA)
+        base_color = (22, 160, 133)  # Your desired main background color
         for y in range(h):
-            c = 200 - int(170 * y / h)
-            grad.fill((0, 0, c, 230), pygame.Rect(0, y, self.sw, 1))
+            # Create a subtle gradient by varying the color slightly around the base
+            factor = y / h  # 0 at top, 1 at bottom
+            # Adjust brightness: slightly lighter at top, slightly darker at bottom
+            r = int(base_color[0])  # Vary red by ±20
+            g = int(base_color[1])  # Vary green by ±20
+            b = int(base_color[2])  # Vary blue by ±20
+            # Clamp values to ensure they stay in valid range (0-255)
+            r = max(0, min(255, r))
+            g = max(0, min(255, g))
+            b = max(0, min(255, b))
+            grad.fill((r, g, b, 230), pygame.Rect(0, y, self.sw, 1))
         self.screen.blit(grad, (0, 0))
-        pygame.draw.rect(self.screen, (0, 51, 255),
-                         pygame.Rect(0, 0, self.sw, h), width=2, border_radius=8)
+        pygame.draw.rect(self.screen, (247, 220, 111),
+                        pygame.Rect(0, 0, self.sw, h), width=2, border_radius=8)
 
         # ---------- line 1: predator → prey ----------
         def make_circle_surf(col, r=8):
@@ -167,43 +177,36 @@ class Game:
             )
             return surf
 
-        arrow_srf  = make_arrow_surf()              # shorter arrow
-        gap_srf    = pygame.Surface((6, 1), pygame.SRCALPHA)  # 6-px transparent gap
+        arrow_srf = make_arrow_surf()              # shorter arrow
+        gap_srf = pygame.Surface((6, 1), pygame.SRCALPHA)  # 6-px transparent gap
 
-        pieces = []
-        for p in self.players:
-            pieces += [
-                make_circle_surf(p.color),
-                gap_srf,          # gap before arrow
-                arrow_srf,
-                gap_srf,          # gap after arrow
-                make_circle_surf(p.prey.color),
-                gap_srf           # extra gap between pairs
+        # Draw each player's predator → prey group aligned with Line 2's x0
+        y_pos = 4  # y position for Line 1
+        for i, p in enumerate(self.players):
+            # Compute x0 to match Line 2's positioning
+            x0 = i * col_w + pad
+            
+            # Create the pieces for this player (predator → prey)
+            pieces = [
+                make_circle_surf(p.color),  # Predator circle
+                gap_srf,                    # Gap before arrow
+                arrow_srf,                  # Arrow
+                gap_srf,                    # Gap after arrow
+                make_circle_surf(p.prey.color if p.prey else (90, 90, 90)),  # Prey circle (gray if None)
+                gap_srf                     # Extra gap between pairs
             ]
-
-
-        # for p in self.players:
-        #     # predator circle
-        #     pieces.append(make_circle_surf(p.color))
-        #     # arrow
-        #     pieces.append(arrow_srf)
-        #     # prey circle
-        #     pieces.append(make_circle_surf(p.prey.color))
-        #     # spacing
-        #     pieces.append(space_srf)
-
-        # center all pieces horizontally
-        tot_w = sum(s.get_width() for s in pieces)
-        cur_x = self.sw // 2 - tot_w // 2
-        for srf in pieces:
-            self.screen.blit(srf, (cur_x, 4))   # y = 4 px 下緣對齊舊字體
-            cur_x += srf.get_width()
+            
+            # Draw each piece starting at x0
+            cur_x = x0
+            for srf in pieces:
+                self.screen.blit(srf, (cur_x, y_pos))
+                cur_x += srf.get_width()
 
         # ---------- line 2: player cards (unchanged) ----------
-        card_h   = 26
-        base_y   = 30
-        score_f  = pygame.font.SysFont("Arial", 18, bold=True)
-        small_f  = pygame.font.SysFont("Arial", 14)
+        card_h = 26
+        base_y = 30
+        score_f = pygame.font.SysFont("Arial", 18, bold=True)
+        small_f = pygame.font.SysFont("Arial", 14)
 
         for i, p in enumerate(self.players):
             x0 = i * col_w + pad
@@ -222,7 +225,7 @@ class Game:
             # score
             sc_txt = score_f.render(str(p.score), True, (255, 255, 255))
             self.screen.blit(sc_txt,
-                             (x0 + 35, base_y + card_h // 2 - sc_txt.get_height() // 2))
+                            (x0 + 35, base_y + card_h // 2 - sc_txt.get_height() // 2))
 
             # extra seconds (power / respawn)
             extra = ""
@@ -232,7 +235,7 @@ class Game:
                 extra = f"{p.respawn_timer // 60 + 1}s"
             if extra:
                 ext_col = (255, 215, 0) if p.power_mode else (200, 200, 200)
-                ex_srf  = small_f.render(extra, True, ext_col)
+                ex_srf = small_f.render(extra, True, ext_col)
                 self.screen.blit(ex_srf,
-                                 (card_rect.right - ex_srf.get_width() - 6,
-                                  base_y + card_h // 2 - ex_srf.get_height() // 2))
+                                (card_rect.right - ex_srf.get_width() - 6,
+                                base_y + card_h // 2 - ex_srf.get_height() // 2))

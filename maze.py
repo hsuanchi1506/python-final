@@ -59,8 +59,8 @@ class Maze:
     # Draw the maze walls to the screen; support vertical offset
     # --------------------------------------------------
     def draw(self, screen, offset_y=0):
-        wall_color = (0, 51, 255)
-        inner_color = (0, 102, 255)
+        wall_color = (22, 160, 133 )
+        inner_color = (247, 220, 111)
 
         for y in range(self.height):
             for x in range(self.width):
